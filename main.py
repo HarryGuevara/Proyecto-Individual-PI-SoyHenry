@@ -6,7 +6,7 @@ from io import StringIO
 app = FastAPI()
 
 # URL del archivo combinado en la nube
-url = 'https://drive.google.com/file/d/1Hs6KfzbezedqjlFZj_xVeWlVT5ZEMyw8/view?usp=drive_link'
+url = 'https://drive.google.com/uc?export=download&id=1Hs6KfzbezedqjlFZj_xVeWlVT5ZEMyw8'
 
 # Descargar y cargar el archivo combinado
 response = requests.get(url)
