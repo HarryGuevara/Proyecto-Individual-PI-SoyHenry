@@ -1,14 +1,16 @@
-from fastapi import FastAPI
 import pandas as pd
+from fastapi import FastAPI
+import requests
+from io import StringIO
 
 app = FastAPI()
 
-# Cargar los datos
-df_unido = pd.read_csv('D:/SOYHENRY_PI_1/df_unido.csv')
-movie_dataset_cleaned = pd.read_csv('D:/SOYHENRY_PI_1/movie_dataset_cleaned.csv')
+# URL del archivo combinado en la nube
+url = 'https://drive.google.com/file/d/1Hs6KfzbezedqjlFZj_xVeWlVT5ZEMyw8/view?usp=drive_link'
 
-# Unir los datasets en base a la columna 'id'
-df_combined = pd.merge(df_unido, movie_dataset_cleaned, left_on='id', right_on='id', how='outer')
+# Descargar y cargar el archivo combinado
+response = requests.get(url)
+df_combined = pd.read_csv(StringIO(response.text))
 
 @app.get("/cantidad_filmaciones_mes/{mes}")
 async def cantidad_filmaciones_mes(mes: str):
