@@ -1,22 +1,24 @@
 import pandas as pd
 from fastapi import FastAPI
 import requests
-from io import StringIO
 
 app = FastAPI()
 
-# URL del archivo combinado en la nube
-url = 'https://drive.google.com/uc?export=download&id=1Hs6KfzbezedqjlFZj_xVeWlVT5ZEMyw8'
+# URLs de los archivos en el repositorio de GitHub (versión raw)
+url_unido = 'https://raw.githubusercontent.com/HarryGuevara/Proyecto-Individual-PI-SoyHenry/main/df_unido.csv'
+url_cleaned = 'https://raw.githubusercontent.com/HarryGuevara/Proyecto-Individual-PI-SoyHenry/main/movie_dataset_cleaned.csv'
 
-# Descargar y cargar el archivo combinado
-response = requests.get(url)
-df_combined = pd.read_csv(StringIO(response.text))
+# Descargar y cargar los archivos
+df_unido = pd.read_csv(url_unido)
+df_cleaned = pd.read_csv(url_cleaned)
+
+# Rutas de la API
 
 @app.get("/cantidad_filmaciones_mes/{mes}")
 async def cantidad_filmaciones_mes(mes: str):
-    df_combined['release_date'] = pd.to_datetime(df_combined['release_date'], errors='coerce')
+    df_cleaned['release_date'] = pd.to_datetime(df_cleaned['release_date'], errors='coerce')
     mes_num = pd.to_datetime(mes, format='%B').month
-    cantidad = df_combined[df_combined['release_date'].dt.month == mes_num].shape[0]
+    cantidad = df_cleaned[df_cleaned['release_date'].dt.month == mes_num].shape[0]
     return f"{cantidad} cantidad de películas fueron estrenadas en el mes de {mes}"
 
 @app.get("/cantidad_filmaciones_dia/{dia}")
@@ -27,13 +29,13 @@ async def cantidad_filmaciones_dia(dia: str):
     dia_num = dias.get(dia.lower())
     if dia_num is None:
         return "Día inválido"
-    df_combined['release_date'] = pd.to_datetime(df_combined['release_date'], errors='coerce')
-    cantidad = df_combined[df_combined['release_date'].dt.dayofweek == dia_num].shape[0]
+    df_cleaned['release_date'] = pd.to_datetime(df_cleaned['release_date'], errors='coerce')
+    cantidad = df_cleaned[df_cleaned['release_date'].dt.dayofweek == dia_num].shape[0]
     return f"{cantidad} cantidad de películas fueron estrenadas en los días {dia}"
 
 @app.get("/score_titulo/{titulo_de_la_filmacion}")
 async def score_titulo(titulo_de_la_filmacion: str):
-    pelicula = df_combined[df_combined['title'].str.contains(titulo_de_la_filmacion, case=False, na=False)]
+    pelicula = df_cleaned[df_cleaned['title'].str.contains(titulo_de_la_filmacion, case=False, na=False)]
     if pelicula.empty:
         return "Título no encontrado"
     score = pelicula.iloc[0]['popularity']
@@ -42,7 +44,7 @@ async def score_titulo(titulo_de_la_filmacion: str):
 
 @app.get("/votos_titulo/{titulo_de_la_filmacion}")
 async def votos_titulo(titulo_de_la_filmacion: str):
-    pelicula = df_combined[df_combined['title'].str.contains(titulo_de_la_filmacion, case=False, na=False)]
+    pelicula = df_cleaned[df_cleaned['title'].str.contains(titulo_de_la_filmacion, case=False, na=False)]
     if pelicula.empty:
         return "Título no encontrado"
     votos = pelicula.iloc[0]['vote_count']
@@ -53,7 +55,7 @@ async def votos_titulo(titulo_de_la_filmacion: str):
 
 @app.get("/get_actor/{nombre_actor}")
 async def get_actor(nombre_actor: str):
-    actor = df_combined[df_combined['name'].str.contains(nombre_actor, case=False, na=False)]
+    actor = df_unido[df_unido['name'].str.contains(nombre_actor, case=False, na=False)]
     if actor.empty:
         return "Actor no encontrado"
     cantidad_peliculas = actor.shape[0]
@@ -63,7 +65,7 @@ async def get_actor(nombre_actor: str):
 
 @app.get("/get_director/{nombre_director}")
 async def get_director(nombre_director: str):
-    director = df_combined[df_combined['name'].str.contains(nombre_director, case=False, na=False)]
+    director = df_unido[df_unido['name'].str.contains(nombre_director, case=False, na=False)]
     if director.empty:
         return "Director no encontrado"
     resultados = []
