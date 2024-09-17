@@ -5,8 +5,8 @@ import requests
 app = FastAPI()
 
 # URLs de los archivos en el repositorio de GitHub (versión raw)
-url_unido = 'https://raw.githubusercontent.com/HarryGuevara/Proyecto-Individual-PI-SoyHenry/main/df_unido.csv'
-url_cleaned = 'https://raw.githubusercontent.com/HarryGuevara/Proyecto-Individual-PI-SoyHenry/main/movie_dataset_cleaned.csv'
+url_unido = 'https://github.com/HarryGuevara/Proyecto-Individual-PI-SoyHenry/blob/master/df_unido.csv'
+url_cleaned = 'https://github.com/HarryGuevara/Proyecto-Individual-PI-SoyHenry/blob/master/movie_dataset_cleaned.csv'
 
 # Descargar y cargar los archivos
 df_unido = pd.read_csv(url_unido)
