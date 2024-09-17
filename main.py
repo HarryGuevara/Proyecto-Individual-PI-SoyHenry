@@ -1,16 +1,18 @@
 import pandas as pd
 from fastapi import FastAPI
 import requests
-from io import StringIO
 
 app = FastAPI()
 
-# URL del archivo combinado en la nube
-url = 'https://drive.google.com/file/d/1Hs6KfzbezedqjlFZj_xVeWlVT5ZEMyw8/view?usp=drive_link'
+# URLs de los archivos en el repositorio de GitHub (versión raw)
+url_unido = 'https://raw.githubusercontent.com/HarryGuevara/Proyecto-Individual-PI-SoyHenry/main/df_unido.csv'
+url_cleaned = 'https://raw.githubusercontent.com/HarryGuevara/Proyecto-Individual-PI-SoyHenry/main/movie_dataset_cleaned.csv'
 
-# Descargar y cargar el archivo combinado
-response = requests.get(url)
-df_combined = pd.read_csv(StringIO(response.text))
+# Descargar y cargar los archivos
+df_unido = pd.read_csv(url_unido)
+df_cleaned = pd.read_csv(url_cleaned)
+
+# Rutas de la API
 
 @app.get("/cantidad_filmaciones_mes/{mes}")
 async def cantidad_filmaciones_mes(mes: str):
