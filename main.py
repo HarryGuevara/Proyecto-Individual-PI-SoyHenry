@@ -16,10 +16,13 @@ df_cleaned = pd.read_csv(url_cleaned)
 
 @app.get("/cantidad_filmaciones_mes/{mes}")
 async def cantidad_filmaciones_mes(mes: str):
+    try:
+        mes_num = pd.to_datetime(mes, format='%B').month
+    except ValueError:
+        return {"error": "Mes inválido. Usa el nombre completo en inglés (Ej: January, February)"}
     df_cleaned['release_date'] = pd.to_datetime(df_cleaned['release_date'], errors='coerce')
-    mes_num = pd.to_datetime(mes, format='%B').month
     cantidad = df_cleaned[df_cleaned['release_date'].dt.month == mes_num].shape[0]
-    return f"{cantidad} cantidad de películas fueron estrenadas en el mes de {mes}"
+    return {"mes": mes, "cantidad_peliculas": cantidad}
 
 @app.get("/cantidad_filmaciones_dia/{dia}")
 async def cantidad_filmaciones_dia(dia: str):
@@ -28,23 +31,30 @@ async def cantidad_filmaciones_dia(dia: str):
     }
     dia_num = dias.get(dia.lower())
     if dia_num is None:
-        return "Día inválido"
+        return {"error": "Día inválido. Usa el nombre del día en español (Ej: lunes, martes)"}
     df_cleaned['release_date'] = pd.to_datetime(df_cleaned['release_date'], errors='coerce')
     cantidad = df_cleaned[df_cleaned['release_date'].dt.dayofweek == dia_num].shape[0]
-    return f"{cantidad} cantidad de películas fueron estrenadas en los días {dia}"
+    return {"dia": dia, "cantidad_peliculas": cantidad}
 
 @app.get("/score_titulo/{titulo_de_la_filmacion}")
 async def score_titulo(titulo_de_la_filmacion: str):
-    pelicula = df_cleaned[df_cleaned['title'].str.contains(titulo_de_la_filmacion, case=False, na=False)]
-    if pelicula.empty:
-        return "Título no encontrado"
-    score = pelicula.iloc[0]['popularity']
-    año = pelicula.iloc[0]['release_year']
-    return f"La película {titulo_de_la_filmacion} fue estrenada en el año {año} con un score/popularidad de {score}"
+    peliculas = df_cleaned[df_cleaned['title'].str.contains(titulo_de_la_filmacion, case=False, na=False)]
+    if peliculas.empty:
+        return {"error": "Título no encontrado"}
+    
+    resultados = []
+    for _, pelicula in peliculas.iterrows():
+        resultados.append({
+            'titulo': pelicula['title'],
+            'año': pelicula['release_year'],
+            'score': pelicula['popularity']
+        })
+    
+    return resultados
 
 @app.get("/votos_titulo/{titulo_de_la_filmacion}")
 async def votos_titulo(titulo_de_la_filmacion: str):
-    pelicula = df_cleaned[df_cleaned['title'].str.contains(titulo_de_la_filmacion, case=False, na=False)]
+    pelicula = df_combined[df_combined['title'].str.contains(titulo_de_la_filmacion, case=False, na=False)]
     if pelicula.empty:
         return "Título no encontrado"
     votos = pelicula.iloc[0]['vote_count']
@@ -55,19 +65,31 @@ async def votos_titulo(titulo_de_la_filmacion: str):
 
 @app.get("/get_actor/{nombre_actor}")
 async def get_actor(nombre_actor: str):
-    actor = df_unido[df_unido['name'].str.contains(nombre_actor, case=False, na=False)]
+    actores = df_unido[df_unido['role'] == 'Actor']  # Filtra solo actores
+    actor = actores[actores['name'].str.contains(nombre_actor, case=False, na=False)]
+    
     if actor.empty:
-        return "Actor no encontrado"
+        return {"error": "Actor no encontrado"}
+    
     cantidad_peliculas = actor.shape[0]
-    retorno_promedio = actor['return'].mean()
     retorno_total = actor['return'].sum()
-    return f"El actor {nombre_actor} ha participado de {cantidad_peliculas} cantidad de filmaciones, el mismo ha conseguido un retorno de {retorno_total} con un promedio de {retorno_promedio} por filmación"
+    retorno_promedio = actor['return'].mean()
+    
+    return {
+        "actor": nombre_actor,
+        "cantidad_peliculas": cantidad_peliculas,
+        "retorno_total": retorno_total,
+        "retorno_promedio": retorno_promedio
+    }
 
 @app.get("/get_director/{nombre_director}")
 async def get_director(nombre_director: str):
-    director = df_unido[df_unido['name'].str.contains(nombre_director, case=False, na=False)]
+    directores = df_unido[df_unido['role'] == 'Director']  # Filtra solo directores
+    director = directores[directores['name'].str.contains(nombre_director, case=False, na=False)]
+    
     if director.empty:
-        return "Director no encontrado"
+        return {"error": "Director no encontrado"}
+    
     resultados = []
     for _, row in director.iterrows():
         resultados.append({
@@ -77,4 +99,5 @@ async def get_director(nombre_director: str):
             'costo': row['budget'],
             'ganancia': row['revenue']
         })
+    
     return resultados
