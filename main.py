@@ -52,17 +52,28 @@ async def score_titulo(titulo_de_la_filmacion: str):
     
     return resultados
 
-@app.get("/votos_titulo/{titulo_de_la_filmacion}")
-async def votos_titulo(titulo_de_la_filmacion: str):
-    pelicula = df_combined[df_combined['title'].str.contains(titulo_de_la_filmacion, case=False, na=False)]
-    if pelicula.empty:
-        return "Título no encontrado"
-    votos = pelicula.iloc[0]['vote_count']
-    promedio_votos = pelicula.iloc[0]['vote_average']
-    if votos < 2000:
-        return "La película no cumple con la condición de al menos 2000 valoraciones"
-    return f"La película {titulo_de_la_filmacion} fue estrenada en el año {pelicula.iloc[0]['release_year']}. La misma cuenta con un total de {votos} valoraciones, con un promedio de {promedio_votos}"
-
+@app.get("/votos_titulo/{titulo_de_la_filmacion}")  
+async def votos_titulo(titulo_de_la_filmacion: str):  
+    # Filtra las películas que coinciden con el título proporcionado  
+    pelicula = df_cleaned[df_cleaned['title'].str.contains(titulo_de_la_filmacion, case=False, na=False)]  
+    
+    if pelicula.empty:  
+        return {"error": "Título no encontrado"}  
+    
+    # Obtén la primera película coincidente  
+    peli_info = pelicula.iloc[0]  
+    votos = peli_info['vote_count']  
+    promedio_votos = peli_info['vote_average']  
+    
+    if votos < 2000:  
+        return {"message": "La película no cumple con la condición de al menos 2000 valoraciones"}  
+    
+    return {  
+        "titulo": peli_info['title'],  
+        "año": peli_info['release_year'],  
+        "total_votos": votos,  
+        "promedio_votos": promedio_votos  
+    }
 @app.get("/get_actor/{nombre_actor}")
 async def get_actor(nombre_actor: str):
     actores = df_unido[df_unido['role'] == 'Actor']  # Filtra solo actores
