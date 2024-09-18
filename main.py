@@ -1,28 +1,63 @@
 import pandas as pd
 from fastapi import FastAPI
-import requests
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 app = FastAPI()
 
 # URLs de los archivos en el repositorio de GitHub (versión raw)
-url_unido = 'https://raw.githubusercontent.com/HarryGuevara/Proyecto-Individual-PI-SoyHenry/main/df_unido.csv'
 url_cleaned = 'https://raw.githubusercontent.com/HarryGuevara/Proyecto-Individual-PI-SoyHenry/main/movie_dataset_cleaned.csv'
+url_unido = 'https://raw.githubusercontent.com/HarryGuevara/Proyecto-Individual-PI-SoyHenry/main/df_unido.csv'
 
 # Descargar y cargar los archivos
-df_unido = pd.read_csv(url_unido)
 df_cleaned = pd.read_csv(url_cleaned)
+df_unido = pd.read_csv(url_unido)
+
+# Preprocesamiento de datos
+df_cleaned['overview'] = df_cleaned['overview'].fillna('')
+df_cleaned['name_genres'] = df_cleaned['name_genres'].fillna('')
+
+# Crear una nueva columna combinando características
+df_cleaned['features'] = df_cleaned['overview'] + ' ' + df_cleaned['name_genres']
+
+# Vectorización de las características combinadas
+tfidf = TfidfVectorizer(stop_words='english')
+tfidf_matrix = tfidf.fit_transform(df_cleaned['features'])
+
+# Calcular similitud de coseno entre todas las películas
+cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
+
+# Crear una función para obtener el índice de una película a partir de su título
+indices = pd.Series(df_cleaned.index, index=df_cleaned['title']).drop_duplicates()
+
+# Función para obtener recomendaciones
+def get_recommendations(title, cosine_sim=cosine_sim):
+    # Obtener el índice de la película que coincide con el título
+    idx = indices.get(title)
+    if idx is None:
+        return pd.DataFrame(columns=['title', 'overview'])  # Retorna un DataFrame vacío si no se encuentra la película
+
+    # Obtener los puntajes de similitud de todas las películas con esa película
+    sim_scores = list(enumerate(cosine_sim[idx]))
+
+    # Ordenar las películas basadas en los puntajes de similitud
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+
+    # Obtener los índices de las 10 películas más similares
+    sim_scores = sim_scores[1:11]  # Excluye la película misma
+    movie_indices = [i[0] for i in sim_scores]
+
+    # Retornar los títulos de las 10 películas más similares
+    return df_cleaned[['title', 'overview']].iloc[movie_indices]
 
 # Rutas de la API
 
 @app.get("/cantidad_filmaciones_mes/{mes}")
 async def cantidad_filmaciones_mes(mes: str):
-    try:
-        mes_num = pd.to_datetime(mes, format='%B').month
-    except ValueError:
-        return {"error": "Mes inválido. Usa el nombre completo en inglés (Ej: January, February)"}
     df_cleaned['release_date'] = pd.to_datetime(df_cleaned['release_date'], errors='coerce')
+    mes_num = pd.to_datetime(mes, format='%B').month
     cantidad = df_cleaned[df_cleaned['release_date'].dt.month == mes_num].shape[0]
-    return {"mes": mes, "cantidad_peliculas": cantidad}
+    return f"{cantidad} cantidad de películas fueron estrenadas en el mes de {mes}"
 
 @app.get("/cantidad_filmaciones_dia/{dia}")
 async def cantidad_filmaciones_dia(dia: str):
@@ -31,30 +66,23 @@ async def cantidad_filmaciones_dia(dia: str):
     }
     dia_num = dias.get(dia.lower())
     if dia_num is None:
-        return {"error": "Día inválido. Usa el nombre del día en español (Ej: lunes, martes)"}
+        return "Día inválido"
     df_cleaned['release_date'] = pd.to_datetime(df_cleaned['release_date'], errors='coerce')
     cantidad = df_cleaned[df_cleaned['release_date'].dt.dayofweek == dia_num].shape[0]
-    return {"dia": dia, "cantidad_peliculas": cantidad}
+    return f"{cantidad} cantidad de películas fueron estrenadas en los días {dia}"
 
 @app.get("/score_titulo/{titulo_de_la_filmacion}")
 async def score_titulo(titulo_de_la_filmacion: str):
-    peliculas = df_cleaned[df_cleaned['title'].str.contains(titulo_de_la_filmacion, case=False, na=False)]
-    if peliculas.empty:
-        return {"error": "Título no encontrado"}
-    
-    resultados = []
-    for _, pelicula in peliculas.iterrows():
-        resultados.append({
-            'titulo': pelicula['title'],
-            'año': pelicula['release_year'],
-            'score': pelicula['popularity']
-        })
-    
-    return resultados
+    pelicula = df_cleaned[df_cleaned['title'].str.contains(titulo_de_la_filmacion, case=False, na=False)]
+    if pelicula.empty:
+        return "Título no encontrado"
+    score = pelicula.iloc[0]['popularity']
+    año = pelicula.iloc[0]['release_year']
+    return f"La película {titulo_de_la_filmacion} fue estrenada en el año {año} con un score/popularidad de {score}"
 
 @app.get("/votos_titulo/{titulo_de_la_filmacion}")
 async def votos_titulo(titulo_de_la_filmacion: str):
-    pelicula = df_combined[df_combined['title'].str.contains(titulo_de_la_filmacion, case=False, na=False)]
+    pelicula = df_cleaned[df_cleaned['title'].str.contains(titulo_de_la_filmacion, case=False, na=False)]
     if pelicula.empty:
         return "Título no encontrado"
     votos = pelicula.iloc[0]['vote_count']
@@ -65,31 +93,19 @@ async def votos_titulo(titulo_de_la_filmacion: str):
 
 @app.get("/get_actor/{nombre_actor}")
 async def get_actor(nombre_actor: str):
-    actores = df_unido[df_unido['role'] == 'Actor']  # Filtra solo actores
-    actor = actores[actores['name'].str.contains(nombre_actor, case=False, na=False)]
-    
+    actor = df_unido[df_unido['name_actor'].str.contains(nombre_actor, case=False, na=False)]
     if actor.empty:
-        return {"error": "Actor no encontrado"}
-    
+        return "Actor no encontrado"
     cantidad_peliculas = actor.shape[0]
-    retorno_total = actor['return'].sum()
     retorno_promedio = actor['return'].mean()
-    
-    return {
-        "actor": nombre_actor,
-        "cantidad_peliculas": cantidad_peliculas,
-        "retorno_total": retorno_total,
-        "retorno_promedio": retorno_promedio
-    }
+    retorno_total = actor['return'].sum()
+    return f"El actor {nombre_actor} ha participado de {cantidad_peliculas} cantidad de filmaciones, el mismo ha conseguido un retorno de {retorno_total} con un promedio de {retorno_promedio} por filmación"
 
 @app.get("/get_director/{nombre_director}")
 async def get_director(nombre_director: str):
-    directores = df_unido[df_unido['role'] == 'Director']  # Filtra solo directores
-    director = directores[directores['name'].str.contains(nombre_director, case=False, na=False)]
-    
+    director = df_unido[df_unido['name_actor'].str.contains(nombre_director, case=False, na=False)]
     if director.empty:
-        return {"error": "Director no encontrado"}
-    
+        return "Director no encontrado"
     resultados = []
     for _, row in director.iterrows():
         resultados.append({
@@ -99,5 +115,13 @@ async def get_director(nombre_director: str):
             'costo': row['budget'],
             'ganancia': row['revenue']
         })
-    
     return resultados
+
+@app.get("/recomendar/{titulo}")
+async def recomendar(titulo: str):
+    recomendaciones = get_recommendations(titulo)
+    if recomendaciones.empty:
+        return {"mensaje": "Película no encontrada"}
+    
+    # Convertir el DataFrame a una lista de diccionarios
+    return recomendaciones.to_dict(orient='records')

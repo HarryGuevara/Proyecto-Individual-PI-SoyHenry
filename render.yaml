@@ -1,0 +1,13 @@
+# Exported from Render on 2024-09-18T01:03:29Z
+services:
+- type: web
+  name: Proyecto-Individual-PI-SoyHenry
+  runtime: python
+  repo: https://github.com/HarryGuevara/Proyecto-Individual-PI-SoyHenry
+  plan: free
+  region: oregon
+  buildCommand: pip install -r requirements.txt
+  startCommand: uvicorn main:app --host 0.0.0.0 --port 10000
+  previews:
+    generation: automatic
+version: "1"
