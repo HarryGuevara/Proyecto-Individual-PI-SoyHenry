@@ -11,6 +11,10 @@ url_cleaned = 'https://raw.githubusercontent.com/HarryGuevara/Proyecto-Individua
 df_unido = None  
 df_cleaned = None  
 
+@app.get("/")
+async def root():
+    return {"message": "API está funcionando"}
+
 # Función para cargar los DataFrames  
 def load_dataframes():  
     global df_unido, df_cleaned  
