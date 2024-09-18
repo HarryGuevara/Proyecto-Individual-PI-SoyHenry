@@ -13,6 +13,10 @@ url_unido = 'https://raw.githubusercontent.com/HarryGuevara/Proyecto-Individual-
 df_cleaned = pd.read_csv(url_cleaned)
 df_unido = pd.read_csv(url_unido)
 
+@app.get("/")
+async def read_root():
+    return {"message": "Welcome to the API!"}
+
 # Preprocesamiento de datos
 df_cleaned['overview'] = df_cleaned['overview'].fillna('')
 df_cleaned['name_genres'] = df_cleaned['name_genres'].fillna('')
