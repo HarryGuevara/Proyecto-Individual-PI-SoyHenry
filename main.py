@@ -5,8 +5,8 @@ from typing import Optional
 app = FastAPI()
 
 # URLs de los archivos CSV en GitHub
-url_cleaned = 'https://raw.githubusercontent.com/HarryGuevara/Proyecto-Individual-PI-SoyHenry/main/df_cleaned.csv'
-url_unido = 'https://raw.githubusercontent.com/HarryGuevara/Proyecto-Individual-PI-SoyHenry/main/df_unido.csv'
+url_unido = 'https://raw.githubusercontent.com/HarryGuevara/Proyecto-Individual-PI-SoyHenry/master/df_unido.csv'
+url_cleaned = 'https://raw.githubusercontent.com/HarryGuevara/Proyecto-Individual-PI-SoyHenry/master/movie_dataset_cleaned.csv'
 
 # Descargar y cargar los archivos CSV
 try:
